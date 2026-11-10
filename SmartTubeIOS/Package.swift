@@ -31,7 +31,7 @@ let package = Package(
             name: "SmartTubeIOSCore",
             dependencies: [],
             path: "Sources/SmartTubeIOSCore",
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         // MARK: UI – iOS/iPadOS/macOS (SwiftUI)
         .target(
@@ -46,14 +46,14 @@ let package = Package(
                 .copy("Resources/yt.solver.lib.min.js"),
                 .copy("Resources/yt.solver.core.min.js"),
             ],
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         // MARK: Tests
         .testTarget(
             name: "SmartTubeIOSTests",
             dependencies: ["SmartTubeIOSCore", "SmartTubeIOS"],
             path: "Tests/SmartTubeIOSTests",
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            swiftSettings: [.swiftLanguageMode(.v5)]
         ),
     ]
 )
