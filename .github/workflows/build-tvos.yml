@@ -28,7 +28,7 @@ jobs:
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
-            <key>API_KEY</key><string>AIzaSyBq7Kj3mN4oP5qR6sT8uV9wX0yZ1aB2c</string>
+            <key>API_KEY</key><string>AIzas6BgDYbqbCTre8BJRM91Qss4QMw26Yv7Met</string>
             <key>GCM_SENDER_ID</key><string>984789156575</string>
             <key>PLIST_VERSION</key><string>1</string>
             <key>BUNDLE_ID</key><string>com.void.smarttube.app</string>
