@@ -639,11 +639,11 @@ extension InnerTubeAPI {
         let streamingData = json["streamingData"] as? [String: Any]
         let playabilityDict = json["playabilityStatus"] as? [String: Any]
         let playabilityStatus = playabilityDict?["status"] as? String ?? "unknown"
-        let playabilityReason =
-            playabilityDict?["reason"] as? String
-            ?? (playabilityDict?["errorScreen"] as? [String: Any])
+        let playabilityErrorSubreason =
+            (playabilityDict?["errorScreen"] as? [String: Any])
             .flatMap { ($0["playerErrorMessageRenderer"] as? [String: Any])?["subreason"] as? [String: Any] }
             .flatMap { extractText($0) }
+        let playabilityReason = (playabilityDict?["reason"] as? String) ?? playabilityErrorSubreason
         tubeLog.notice(
             "parsePlayerInfo id=\(videoId, privacy: .public) playability=\(playabilityStatus, privacy: .public) reason=\(playabilityReason ?? "nil", privacy: .public) hasStreamingData=\(streamingData != nil, privacy: .public)"
         )

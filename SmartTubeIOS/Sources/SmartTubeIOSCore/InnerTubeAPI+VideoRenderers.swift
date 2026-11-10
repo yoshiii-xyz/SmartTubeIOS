@@ -946,45 +946,44 @@ extension InnerTubeAPI {
     // MARK: – WEB videoRenderer parser
     func parseVideoRenderer(_ r: [String: Any]) -> Video? {
         guard let videoId = r["videoId"] as? String else { return nil }
-        let title =
-            (r["title"] as? [String: Any]).flatMap { extractText($0) }
-            ?? (r["headline"] as? [String: Any]).flatMap { extractText($0) }
-            ?? ""
-        let channelTitle =
-            (r["ownerText"] as? [String: Any]).flatMap { extractText($0) }
-            ?? (r["shortBylineText"] as? [String: Any]).flatMap { extractText($0) }
-            ?? ""
+        let titleMain = (r["title"] as? [String: Any]).flatMap { extractText($0) }
+        let titleAlt = (r["headline"] as? [String: Any]).flatMap { extractText($0) }
+        let title = titleMain ?? titleAlt ?? ""
+        let channelMain = (r["ownerText"] as? [String: Any]).flatMap { extractText($0) }
+        let channelAlt = (r["shortBylineText"] as? [String: Any]).flatMap { extractText($0) }
+        let channelTitle = channelMain ?? channelAlt ?? ""
 
         // channelId: ownerText (videoRenderer) or shortBylineText (gridVideoRenderer)
-        let channelId: String? = {
-            let sourceKey = r["ownerText"] != nil ? "ownerText" : "shortBylineText"
-            guard let runs = (r[sourceKey] as? [String: Any])?["runs"] as? [[String: Any]],
-                let first = runs.first,
-                let nav = first["navigationEndpoint"] as? [String: Any],
-                let browse = nav["browseEndpoint"] as? [String: Any]
-            else { return nil }
-            return browse["browseId"] as? String
-        }()
+        var channelId: String?
+        let channelSourceKey = r["ownerText"] != nil ? "ownerText" : "shortBylineText"
+        if let runs = (r[channelSourceKey] as? [String: Any])?["runs"] as? [[String: Any]],
+            let first = runs.first,
+            let nav = first["navigationEndpoint"] as? [String: Any],
+            let browse = nav["browseEndpoint"] as? [String: Any]
+        {
+            channelId = browse["browseId"] as? String
+        }
 
         let thumbnails = (r["thumbnail"] as? [String: Any])?["thumbnails"] as? [[String: Any]]
         let thumbURL = thumbnails?.last.flatMap { $0["url"] as? String }.flatMap { URL(string: $0) }
 
         // duration: lengthText (videoRenderer) or thumbnailOverlays[N].thumbnailOverlayTimeStatusRenderer.text (gridVideoRenderer)
-        let lengthText: String? =
-            (r["lengthText"] as? [String: Any]).flatMap { extractText($0) }
-            ?? (r["thumbnailOverlays"] as? [[String: Any]])?
+        let overlayLengthText =
+            (r["thumbnailOverlays"] as? [[String: Any]])?
             .compactMap { ($0["thumbnailOverlayTimeStatusRenderer"] as? [String: Any])?["text"] as? [String: Any] }
             .first.flatMap { extractText($0) }
+        let lengthText: String? =
+            (r["lengthText"] as? [String: Any]).flatMap { extractText($0) }
+            ?? overlayLengthText
         let duration = lengthText.flatMap { parseDuration($0) }
 
-        let viewCountText =
-            (r["viewCountText"] as? [String: Any]).flatMap { extractText($0) }
-            // BUG-014 fix: fall back to shortViewCountText when viewCountText is absent (some locales/auth configs).
-            ?? (r["shortViewCountText"] as? [String: Any]).flatMap { extractText($0) }
-        let viewCount =
-            viewCountText.flatMap { extractNumber($0) }
-            // Further fallback: direct integer field (rare, but present in some compact API responses).
-            ?? r["viewCount"] as? Int
+        // BUG-014 fix: fall back to shortViewCountText when viewCountText is absent (some locales/auth configs).
+        let vctMain = (r["viewCountText"] as? [String: Any]).flatMap { extractText($0) }
+        let vctAlt = (r["shortViewCountText"] as? [String: Any]).flatMap { extractText($0) }
+        let viewCountText = vctMain ?? vctAlt
+        // Further fallback: direct integer field (rare, but present in some compact API responses).
+        let viewCountDirect = r["viewCount"] as? Int
+        let viewCount = viewCountText.flatMap { extractNumber($0) } ?? viewCountDirect
 
         let isLive =
             (r["badges"] as? [[String: Any]])?.contains {
@@ -1124,21 +1123,20 @@ extension InnerTubeAPI {
         let title = (r["title"] as? [String: Any]).flatMap { extractText($0) } ?? ""
 
         // channelTitle: shortBylineText preferred; ownerText as fallback
-        let channelTitle =
-            (r["shortBylineText"] as? [String: Any]).flatMap { extractText($0) }
-            ?? (r["ownerText"] as? [String: Any]).flatMap { extractText($0) }
-            ?? ""
+        let channelPrimary = (r["shortBylineText"] as? [String: Any]).flatMap { extractText($0) }
+        let channelFallback = (r["ownerText"] as? [String: Any]).flatMap { extractText($0) }
+        let channelTitle = channelPrimary ?? channelFallback ?? ""
 
         // channelId: from shortBylineText or ownerText runs[0].navigationEndpoint.browseEndpoint.browseId
-        let channelId: String? = {
-            let sourceKey = r["shortBylineText"] != nil ? "shortBylineText" : "ownerText"
-            guard let runs = (r[sourceKey] as? [String: Any])?["runs"] as? [[String: Any]],
-                let first = runs.first,
-                let nav = first["navigationEndpoint"] as? [String: Any],
-                let browse = nav["browseEndpoint"] as? [String: Any]
-            else { return nil }
-            return browse["browseId"] as? String
-        }()
+        var channelId: String?
+        let channelSourceKey = r["shortBylineText"] != nil ? "shortBylineText" : "ownerText"
+        if let runs = (r[channelSourceKey] as? [String: Any])?["runs"] as? [[String: Any]],
+            let first = runs.first,
+            let nav = first["navigationEndpoint"] as? [String: Any],
+            let browse = nav["browseEndpoint"] as? [String: Any]
+        {
+            channelId = browse["browseId"] as? String
+        }
 
         let thumbnails = (r["thumbnail"] as? [String: Any])?["thumbnails"] as? [[String: Any]]
         let thumbURL = thumbnails?.last.flatMap { $0["url"] as? String }.flatMap { URL(string: $0) }
@@ -1147,10 +1145,11 @@ extension InnerTubeAPI {
         let duration = lengthText.flatMap { parseDuration($0) }
 
         // viewCount: shortViewCountText preferred; viewCountText as fallback; direct int last
-        let viewCountText =
-            (r["shortViewCountText"] as? [String: Any]).flatMap { extractText($0) }
-            ?? (r["viewCountText"] as? [String: Any]).flatMap { extractText($0) }
-        let viewCount = viewCountText.flatMap { extractNumber($0) } ?? r["viewCount"] as? Int
+        let vctPrimary = (r["shortViewCountText"] as? [String: Any]).flatMap { extractText($0) }
+        let vctFallback = (r["viewCountText"] as? [String: Any]).flatMap { extractText($0) }
+        let viewCountText = vctPrimary ?? vctFallback
+        let viewCountDirect = r["viewCount"] as? Int
+        let viewCount = viewCountText.flatMap { extractNumber($0) } ?? viewCountDirect
 
         let watchProgress: Double? = (r["thumbnailOverlays"] as? [[String: Any]])?
             .compactMap {
