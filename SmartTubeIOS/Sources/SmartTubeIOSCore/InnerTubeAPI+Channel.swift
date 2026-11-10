@@ -157,15 +157,16 @@ extension InnerTubeAPI {
             headerDict?["c4TabbedHeaderRenderer"] as? [String: Any]
             ?? headerDict?["pageHeaderRenderer"] as? [String: Any]
         let headerPageTitle = header?["pageTitle"] as? String
-        var title = header.flatMap { $0["title"] as? String } ?? headerPageTitle
-        if title == nil,
+        var resolvedTitle = header.flatMap { $0["title"] as? String } ?? headerPageTitle
+        if resolvedTitle == nil,
             let content = (header?["content"] as? [String: Any])?["pageHeaderViewModel"] as? [String: Any]
         {
             // pageHeaderRenderer uses content.pageHeaderViewModel.title.content
             let contentTitleStr = content["title"] as? String
-            title = (content["title"] as? [String: Any]).flatMap { extractText($0) } ?? contentTitleStr
+            resolvedTitle =
+                (content["title"] as? [String: Any]).flatMap { extractText($0) } ?? contentTitleStr
         }
-        title = title ?? ""
+        let title = resolvedTitle ?? ""
         tubeLog.notice(
             "parseChannel header=\(header != nil ? "found" : "nil", privacy: .public) title='\(title, privacy: .public)'"
         )
