@@ -455,14 +455,18 @@ public struct HomeView: View {
         // collapses to zero height — grid items become invisible and non-tappable
         // because LazyVStack never provides a measured height to LazyVGrid.
         // Row groups are few (typically ≤15 carousels) so eager rendering is fine.
-        let gridVideos = sectionVM.videoGroups.filter { $0.layout != .row }
+        let gridFlatVideos = sectionVM.videoGroups.filter { $0.layout != .row }
             .flatMap(\.videos)
-            .filter { !applyHideShorts || !$0.isShort }
-            .filter { !hideLiveShorts || !($0.isLive && $0.isShort) }
-            .filter { !hideVideoPremieres || !$0.isUpcoming }
-            .filter { !applyHideWatched || !$0.isWatched(threshold: hideWatchedThreshold) }
-            .filter { channelFilter == nil || $0.channelId == channelFilter }
-            .filter { isShorts || !$0.isShort }
+        let gridNoShorts = gridFlatVideos.filter { !applyHideShorts || !$0.isShort }
+        let gridNoLiveShorts = gridNoShorts.filter { !hideLiveShorts || !($0.isLive && $0.isShort) }
+        let gridNoPremieres = gridNoLiveShorts.filter { !hideVideoPremieres || !$0.isUpcoming }
+        let gridNotWatched = gridNoPremieres.filter {
+            !applyHideWatched || !$0.isWatched(threshold: hideWatchedThreshold)
+        }
+        let gridChannelFiltered = gridNotWatched.filter {
+            channelFilter == nil || $0.channelId == channelFilter
+        }
+        let gridVideos = gridChannelFiltered.filter { isShorts || !$0.isShort }
 
         // #62: distinct (channelId, channelTitle) pairs across the currently loaded
         // Subscriptions videos, for the channel-filter menu. Derived client-side from

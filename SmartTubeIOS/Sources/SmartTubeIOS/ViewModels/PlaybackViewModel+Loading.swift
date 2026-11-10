@@ -128,7 +128,7 @@ extension PlaybackViewModel {
                 flushPosition: pos, flushDuration: dur)
             Task { await flush() }
         } else {
-            tracker.transition(
+            _ = tracker.transition(
                 to: video.id, cpn: InnerTubeAPI.generateCPN(),
                 flushPosition: 0, flushDuration: 0)
         }
