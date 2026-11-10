@@ -1,0 +1,69 @@
+name: Build tvOS IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode version
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer 2>/dev/null || true
+          xcodebuild -version
+
+      - name: Create signing + Firebase config stubs
+        run: |
+          cp SmartTubeApp/Config/Secrets.xcconfig.example SmartTubeApp/Config/Secrets.xcconfig
+          for d in "SmartTubeApp" "SmartTubeApp/SmartTubeApp" "SmartTubeApp/Smart Tube"; do
+            mkdir -p "$d"
+            cat > "$d/GoogleService-Info.plist" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>API_KEY</key><string>AIzaSyDummyKeyForUnsignedBuildOnly000000</string>
+            <key>GCM_SENDER_ID</key><string>984789156575</string>
+            <key>PLIST_VERSION</key><string>1</string>
+            <key>BUNDLE_ID</key><string>com.void.smarttube.app</string>
+            <key>PROJECT_ID</key><string>smarttube-unsigned</string>
+            <key>STORAGE_BUCKET</key><string>smarttube-unsigned.appspot.com</string>
+            <key>GOOGLE_APP_ID</key><string>1:984789156575:ios:cf331b7791678d88dd1f6a</string>
+            <key>IS_ADS_ENABLED</key><false/>
+            <key>IS_ANALYTICS_ENABLED</key><false/>
+            <key>IS_APPINVITE_ENABLED</key><false/>
+            <key>IS_GCM_ENABLED</key><false/>
+            <key>IS_SIGNIN_ENABLED</key><false/>
+          </dict>
+          </plist>
+          PLIST
+          done
+
+      - name: Build Smart Tube (tvOS, unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -workspace SmartTube.xcworkspace \
+            -scheme "Smart Tube" \
+            -destination 'generic/platform=tvOS' \
+            -configuration Release \
+            -derivedDataPath build/DD \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tail -60
+
+      - name: Package IPA
+        run: |
+          APP=$(find build/DD/Build/Products -name "Smart Tube.app" -type d | head -1)
+          echo "Found app: $APP"
+          mkdir -p out/Payload
+          cp -R "$APP" out/Payload/
+          cd out && zip -qr ../SmartTube-tvOS.ipa Payload && cd ..
+          ls -lh SmartTube-tvOS.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SmartTube-tvOS-ipa
+          path: SmartTube-tvOS.ipa
+          retention-days: 7
