@@ -10,9 +10,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Xcode version
+      - name: Select newest Xcode
         run: |
-          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer 2>/dev/null || true
+          ls -d /Applications/Xcode*.app
+          NEWEST=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Selecting: $NEWEST"
+          sudo xcode-select -s "$NEWEST/Contents/Developer"
           xcodebuild -version
 
       - name: Create signing + Firebase config stubs
@@ -51,7 +54,14 @@ jobs:
             -destination 'generic/platform=tvOS' \
             -configuration Release \
             -derivedDataPath build/DD \
-            CODE_SIGNING_ALLOWED=NO 2>&1 | tail -60
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee build.log | tail -80
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: build-log
+          path: build.log
+          retention-days: 3
 
       - name: Package IPA
         run: |
